@@ -1,0 +1,360 @@
+Game.js
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const gameOverDiv = document.getElementById('gameOver');
+
+// Game state
+let gameState = {
+  level: 1,
+  coins: localStorage.getItem('coins') ? parseInt(localStorage.getItem('coins')) : 0,
+  passageCount: 0,
+  leaderboard: JSON.parse(localStorage.getItem('leaderboard') || '[]'),
+  unlockedSkins: JSON.parse(localStorage.getItem('unlockedSkins') || '["default"]'),
+  currentSkin: localStorage.getItem('currentSkin') || 'default',
+  backgrounds: JSON.parse(localStorage.getItem('backgrounds') || '["default"]'),
+  currentBackground: localStorage.getItem('currentBackground') || 'default'
+};
+
+const SKINS = {
+  default: { color: '#00ff00', price: 0 },
+  gold: { color: '#ffd700', price: 100 },
+  rainbow: { color: '#ff00ff', price: 200 }
+};
+
+const BACKGROUNDS = {
+  default: { color: '#111', price: 0 },
+  stars: { color: '#000033', price: 150 },
+  gradient: { color: '#330033', price: 250 }
+};
+
+function showShop() {
+  const shopDiv = document.createElement('div');
+  shopDiv.id = 'shop';
+  shopDiv.innerHTML = `
+    <h2>Boutique</h2>
+    <p>Pièces: ${gameState.coins}</p>
+    <div class="shop-items">
+      ${Object.entries(SKINS).map(([id, skin]) => `
+        <div class="shop-item">
+          <div class="preview" style="background-color: ${skin.color}"></div>
+          <button onclick="buySkin('${id}')" 
+            ${gameState.unlockedSkins.includes(id) ? 'disabled' : ''}>
+            ${gameState.unlockedSkins.includes(id) ? 'Possédé' : `Acheter (${skin.price})`}
+          </button>
+        </div>
+      `).join('')}
+    </div>
+    <button onclick="closeShop()">Fermer</button>
+  `;
+  document.body.appendChild(shopDiv);
+}
+
+function buySkin(skinId) {
+  const skin = SKINS[skinId];
+  if (gameState.coins >= skin.price) {
+    gameState.coins -= skin.price;
+    gameState.unlockedSkins.push(skinId);
+    gameState.currentSkin = skinId;
+    localStorage.setItem('coins', gameState.coins);
+    localStorage.setItem('unlockedSkins', JSON.stringify(gameState.unlockedSkins));
+    localStorage.setItem('currentSkin', gameState.currentSkin);
+    closeShop();
+  }
+}
+
+function closeShop() {
+  const shopDiv = document.getElementById('shop');
+  if (shopDiv) shopDiv.remove();
+}
+
+function showGameOver() {
+  gameOverDiv.classList.remove('hidden');
+  const score = gameState.level;
+  gameState.leaderboard.push(score);
+  gameState.leaderboard.sort((a, b) => b - a);
+  gameState.leaderboard = gameState.leaderboard.slice(0, 5);
+  localStorage.setItem('leaderboard', JSON.stringify(gameState.leaderboard));
+
+  const resetButton = document.createElement('button');
+  resetButton.textContent = 'Recommencer';
+  resetButton.onclick = () => {
+    gameOverDiv.classList.add('hidden');
+    localStorage.removeItem('dead');
+    location.reload();
+  };
+
+  const leaderboardHtml = `
+    <h2>Meilleurs scores:</h2>
+    <ol>
+      ${gameState.leaderboard.map(s => `<li>${s}</li>`).join('')}
+    </ol>
+  `;
+
+  gameOverDiv.innerHTML += leaderboardHtml;
+  gameOverDiv.appendChild(resetButton);
+}
+
+if (localStorage.getItem('dead') === 'true') {
+  showGameOver();
+} else {
+  let player = { x: 160, y: 580, size: 20 };
+  let obstacle = { x: Math.random() * 320, y: 0, size: 20, speed: 4 };
+
+  document.addEventListener('touchstart', movePlayer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft') player.x -= 20;
+    if (e.key === 'ArrowRight') player.x += 20;
+  });
+
+  function movePlayer(e) {
+    const touchX = e.touches[0].clientX;
+    if (touchX < canvas.width / 2) player.x -= 20;
+    else player.x += 20;
+  }
+
+  function checkCollision() {
+    return (
+      player.x < obstacle.x + obstacle.size &&
+      player.x + player.size > obstacle.x &&
+      player.y < obstacle.y + obstacle.size &&
+      player.y + player.size > obstacle.y
+    );
+  }
+
+  function update() {
+    if (checkCollision()) {
+      localStorage.setItem('dead', 'true');
+      showGameOver();
+      return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw player
+    ctx.fillStyle = SKINS[gameState.currentSkin].color;
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+
+    // Draw obstacle
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
+
+    // Move obstacle
+    obstacle.y += obstacle.speed;
+    if (obstacle.y > canvas.height) {
+      obstacle.y = 0;
+      obstacle.x = Math.random() * (canvas.width - obstacle.size);
+      gameState.passageCount++;
+      
+      // Add coins for each passage
+      gameState.coins += 10;
+      localStorage.setItem('coins', gameState.coins);
+
+      // Level up every 4 passages
+      if (gameState.passageCount % 2  === 0) {
+        gameState.level++;
+        player.y -= 20; // Moveif (gameState.levelUpCount % 2 === 0) {
+          obstacle.speed += 0.5; //  player up
+        obstacle.speed += 0.5; // Increase difficulty
+      }
+    }
+
+    requestAnimationFrame(update);
+  }
+
+  // Add shop button
+  const shopButton = document.createElement('button');
+  shopButton.textContent = 'Boutique';
+  shopButton.style.position = 'absolute';
+  shopButton.style.top = '10px';
+  shopButton.style.right = '10px';
+  shopButton.onclick = showShop;
+  document.body.appendChild(shopButton);
+
+  update();
+}
+// ... (le reste de votre code)
+
+// État initial des bonus
+let bonuses = [];
+
+function generateBonus() {
+  if (Math.random() < 0.1) { // 10% de chance de générer un bonus
+    const bonus = {
+      x: Math.random() * (canvas.width - 20),
+      y: 0,
+      size: 20,
+      effect: Math.floor(Math.random() * 3) // 0: bouclier, 1: ralentir, 2: monter
+    };
+    bonuses.push(bonus);
+  }
+}
+
+function updateBonus() {
+  for (let i = bonuses.length - 1; i >= 0; i--) {
+    const bonus = bonuses[i];
+
+    // Déplacement du bonus
+    bonus.y += 2; // Vitesse de chute des bonus
+
+    // Vérification de collision avec le joueur
+    if (
+      player.x < bonus.x + bonus.size &&
+      player.x + player.size > bonus.x &&
+      player.y < bonus.y + bonus.size &&
+      player.y + player.size > bonus.y
+    ) {
+      // Appliquer effet du bonus
+      switch (bonus.effect) {
+        case 0: // Bouclier
+          console.log("Bouclier activé!");
+          break;
+        case 1: // Ralentir le cube rouge
+          obstacle.speed *= 0.5;
+          console.log("Cube rouge ralenti!");
+          break;
+        case 2: // Faire monter le cube vert
+          player.y -= 20; 
+          console.log("Cube vert monté!");
+          break;
+      }
+      bonuses.splice(i, 1); // Supprimer le bonus après utilisation
+    }
+
+    // Supprimer le bonus si en hors écran
+    if (bonus.y > canvas.height) {
+      bonuses.splice(i, 1);
+    }
+  }
+}
+
+function update() {
+  if (checkCollision()) {
+    localStorage.setItem('dead', 'true');
+    showGameOver();
+    return;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Dessiner le joueur
+  ctx.fillStyle = SKINS[gameState.currentSkin].color;
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  // Dessiner l'obstacle
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
+
+  // Mettre à jour les bonus
+  updateBonus();
+
+  // Dessiner les bonus
+  ctx.fillStyle = 'yellow'; // Couleur des bonus
+  bonuses.forEach(bonus => {
+    ctx.fillRect(bonus.x, bonus.y, bonus.size, bonus.size);
+  });
+
+  // Déplacer l'obstacle
+  obstacle.y += obstacle.speed;
+  if (obstacle.y > canvas.height) {
+    obstacle.y = 0;
+    obstacle.x = Math.random() * (canvas.width - obstacle.size);
+    
+
+    // ... (le reste de votre code)
+
+    // État initial des bonus
+    let bonuses = [];
+
+    function generateBonus() {
+      if (Math.random() < 0.1) { // 10% de chance de générer un bonus
+        const bonus = {
+          x: Math.random() * (canvas.width - 20),
+          y: 0,
+          size: 20,
+          effect: Math.floor(Math.random() * 3) // 0: bouclier, 1: ralentir, 2: monter
+        };
+        bonuses.push(bonus);
+      }
+    }
+
+    function updateBonus() {
+      for (let i = bonuses.length - 1; i >= 0; i--) {
+        const bonus = bonuses[i];
+
+        // Déplacement du bonus
+        bonus.y += 2; // Vitesse de chute des bonus
+
+        // Vérification de collision avec le joueur
+        if (
+          player.x < bonus.x + bonus.size &&
+          player.x + player.size > bonus.x &&
+          player.y < bonus.y + bonus.size &&
+          player.y + player.size > bonus.y
+        ) {
+          // Appliquer effet du bonus
+          switch (bonus.effect) {
+            case 0: // Bouclier
+              console.log("Bouclier activé!");
+              break;
+            case 1: // Ralentir le cube rouge
+              obstacle.speed *= 0.5;
+              console.log("Cube rouge ralenti!");
+              break;
+            case 2: // Faire monter le cube vert
+              player.y -= 20; 
+              console.log("Cube vert monté!");
+              break;
+          }
+          bonuses.splice(i, 1); // Supprimer le bonus après utilisation
+        }
+
+        // Supprimer le bonus si en hors écran
+        if (bonus.y > canvas.height) {
+          bonuses.splice(i, 1);
+        }
+      }
+    }
+
+    function update() {
+      if (checkCollision()) {
+        localStorage.setItem('dead', 'true');
+        showGameOver();
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Dessiner le joueur
+      ctx.fillStyle = SKINS[gameState.currentSkin].color;
+      ctx.fillRect(player.x, player.y, player.size, player.size);
+
+      // Dessiner l'obstacle
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.size, obstacle.size);
+
+      // Mettre à jour les bonus
+      updateBonus();
+
+      // Dessiner les bonus
+      ctx.fillStyle = 'yellow'; // Couleur des bonus
+      bonuses.forEach(bonus => {
+        ctx.fillRect(bonus.x, bonus.y, bonus.size, bonus.size);
+      });
+
+      // Déplacer l'obstacle
+      obstacle.y += obstacle.speed;
+      if (obstacle.y > canvas.height) {
+        obstacle.y = 0;
+        obstacle.x = Math.random() * (canvas.width - obstacle.size);
+        gameState.passageCount++;
+
+        // Générer un bonus aléatoire
+        generateBonus();
+
+        // ... (le reste de votre logiques d'augmentation de niveau)
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    // ... (le reste de votre code

@@ -1,0 +1,110 @@
+
+
+Style.css
+
+body {
+  margin: 0;
+  background: url('attached_assets/CCA6D642-20E5-404D-B3AF-2717E6DEEFFF.jpeg') no-repeat center center fixed;
+  background-size: cover;
+  font-family: sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#gameCanvas {
+  background: rgba(17, 17, 17, 0.8); /* Légère transparence pour le canvas */
+  display: block;
+  border: 2px solid #fff;
+}
+
+/* Reste de votre code CSS... */
+}
+
+#gameCanvas {
+  background: #111;
+  display: block;
+  border: 2px solid #fff;
+}
+
+#gameOver {
+  position: absolute;
+  top: 40%;
+  text-align: center;
+  width: 100%;
+  color: white;
+  background-color: rgba(0,0,0,0.8);
+  padding: 20px;
+}
+
+#gameOver button {
+  margin-top: 20px;
+  background: #00ff00;
+  color: black;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+#gameOver button:hover {
+  background: #00dd00;
+}
+
+.hidden {
+  display: none;
+}
+
+#shop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  text-align: center;
+}
+
+.shop-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.shop-item {
+  padding: 10px;
+  border: 1px solid #333;
+  border-radius: 5px;
+}
+
+.preview {
+  width: 30px;
+  height: 30px;
+  margin: 0 auto 10px;
+}
+
+button {
+  background: #00ff00;
+  color: black;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin: 5px;
+}
+
+button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  background: #00dd00;
+}
+
+
+
+
+

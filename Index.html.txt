@@ -1,0 +1,22 @@
+Index.html
+Index.html
+
+DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1Life Game</title>
+  <link href="style.css" rel="stylesheet">
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="360" height="640"></canvas>
+    <div id="gameOver" class="hidden">
+      <h1>GAME OVER</h1>
+      <p>Tu as perdu ta seule vie.</p>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
